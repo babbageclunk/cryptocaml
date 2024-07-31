@@ -1,0 +1,4 @@
+(executable
+ (public_name cryptocaml)
+ (name main)
+ (libraries cryptocaml))

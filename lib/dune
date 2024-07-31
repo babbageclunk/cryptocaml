@@ -1,0 +1,3 @@
+(library
+ (name cryptocaml)
+ (libraries hex base64))

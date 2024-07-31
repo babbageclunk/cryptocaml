@@ -1,0 +1,4 @@
+(test
+ (name test_cryptocaml)
+ (modules test_cryptocaml)
+ (libraries alcotest cryptocaml))
