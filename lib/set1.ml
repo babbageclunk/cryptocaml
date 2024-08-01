@@ -19,16 +19,31 @@ let c3data = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b37
 
 let is_alpha c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 
-let
+let expected_order = "etaoinshrdlucmfwypvbgkqjxz"
 
-let score
+module CharMap = Map.Make(Char)
 
-let set1c3 () =
-  let data = hexdecode c3data in
+let char_frequencies text =
+  let counts = CharMap.empty in
+  let add_char map c = CharMap.update c (function None -> Some 1 | Some n -> Some (n + 1)) map in
+  Bytes.fold_left add_char counts text
 
-  let rec find_key key =
-    let decoded = Bytes.map (fun c -> xor_char c key) data in
-    let score = Bytes.fold_left (fun acc c -> acc + (if is_alpha c then 1 else 0)) 0 decoded in
-    if score > 0 then (key, decoded) else find_key (Char.chr (Char.code key + 1)) in
-  let print_key (key, decoded) = Printf.sprintf "Key: %c\nDecoded: %s" key (Bytes.to_string decoded) in
-  print_key (find_key 'a')
+let filter_bytes b pred = Bytes.to_seq b |> Seq.filter pred |> Bytes.of_seq
+
+let chars_by_freq text =
+  let filtered = filter_bytes text is_alpha |> Bytes.map Char.lowercase_ascii in
+  let freqs = char_frequencies filtered in
+  let sorted_freqs = CharMap.bindings freqs |> List.sort (fun (_, a) (_, b) -> compare b a) in
+  List.to_seq sorted_freqs |> Seq.map fst |> Bytes.of_seq
+
+let set1c3 () = "not done"
+
+(* let set1c3 () = *)
+(*   let data = hexdecode c3data in *)
+
+(*   let rec find_key key = *)
+(*     let decoded = Bytes.map (fun c -> xor_char c key) data in *)
+(*     let score = Bytes.fold_left (fun acc c -> acc + (if is_alpha c then 1 else 0)) 0 decoded in *)
+(*     if score > 0 then (key, decoded) else find_key (Char.chr (Char.code key + 1)) in *)
+(*   let print_key (key, decoded) = Printf.sprintf "Key: %c\nDecoded: %s" key (Bytes.to_string decoded) in *)
+(*   print_key (find_key 'a') *)
