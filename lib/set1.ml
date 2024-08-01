@@ -36,6 +36,12 @@ let chars_by_freq text =
   let sorted_freqs = CharMap.bindings freqs |> List.sort (fun (_, a) (_, b) -> compare b a) in
   List.to_seq sorted_freqs |> Seq.map fst |> Bytes.of_seq
 
+(* Guess at a scoring algo: *)
+(* For each char in the expected order, that char is worth a possible
+   len(lowercase) - pos points, find the char in the actual order, it
+   gets possible points - abs(pos - actual pos points). If the char
+   isn't found then 26 - len actual points. *)
+
 let set1c3 () = "not done"
 
 (* let set1c3 () = *)
