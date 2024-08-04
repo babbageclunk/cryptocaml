@@ -41,6 +41,14 @@ let chars_by_freq text =
    len(lowercase) - pos points, find the char in the actual order, it
    gets possible points - abs(pos - actual pos points). If the char
    isn't found then 26 - len actual points. *)
+let score freq_string =
+  let max_char_points = String.length expected_order in
+  let score_char expected_pos char =
+    match (String.index_from_opt freq_string 0 char) with
+    | Some n -> max_char_points - expected_pos - Int.abs (n - expected_pos)
+    | None -> 0
+  in
+  String.to_seq expected_order |> Seq.mapi score_char |> Seq.fold_left (+) 0
 
 let set1c3 () = "not done"
 
