@@ -17,9 +17,7 @@ let set1c2 () = xor_bytes (hexdecode c2data1) (hexdecode c2data2) |> hexencode
 
 let c3data = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
-let is_alpha c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-
-let expected_order = "etaoinshrdlucmfwypvbgkqjxz"
+let expected_order = Bytes.of_string "etaoin shrdlucmfwypvbgkqjxz"
 
 module CharMap = Map.Make(Char)
 
@@ -31,8 +29,7 @@ let char_frequencies text =
 let filter_bytes b pred = Bytes.to_seq b |> Seq.filter pred |> Bytes.of_seq
 
 let chars_by_freq text =
-  let filtered = filter_bytes text is_alpha |> Bytes.map Char.lowercase_ascii in
-  let freqs = char_frequencies filtered in
+  let freqs = Bytes.map Char.lowercase_ascii text |> char_frequencies in
   let sorted_freqs = CharMap.bindings freqs |> List.sort (fun (_, a) (_, b) -> compare b a) in
   List.to_seq sorted_freqs |> Seq.map fst |> Bytes.of_seq
 
@@ -40,24 +37,32 @@ let chars_by_freq text =
 (* For each char in the expected order, that char is worth a possible
    len(lowercase) - pos points, find the char in the actual order, it
    gets possible points - abs(pos - actual pos points). If the char
-   isn't found then 26 - len actual points. *)
+   isn't found then 0 *)
 let score freq_string =
-  let max_char_points = String.length expected_order in
+  let max_char_points = Bytes.length expected_order in
   let score_char expected_pos char =
-    match (String.index_from_opt freq_string 0 char) with
+    match (Bytes.index_from_opt freq_string 0 char) with
     | Some n -> max_char_points - expected_pos - Int.abs (n - expected_pos)
     | None -> 0
   in
-  String.to_seq expected_order |> Seq.mapi score_char |> Seq.fold_left (+) 0
+  Bytes.to_seq expected_order |> Seq.mapi score_char |> Seq.fold_left (+) 0
 
-let set1c3 () = "not done"
+let decrypt text =
+  let xor_with key =
+    let key_bytes = Bytes.make (Bytes.length text) key in
+    xor_bytes text key_bytes in
 
-(* let set1c3 () = *)
-(*   let data = hexdecode c3data in *)
+  let score_key key =
+    let decrypted = xor_with key in
+    let result = chars_by_freq decrypted |> score in
+    (result, key, decrypted) in
 
-(*   let rec find_key key = *)
-(*     let decoded = Bytes.map (fun c -> xor_char c key) data in *)
-(*     let score = Bytes.fold_left (fun acc c -> acc + (if is_alpha c then 1 else 0)) 0 decoded in *)
-(*     if score > 0 then (key, decoded) else find_key (Char.chr (Char.code key + 1)) in *)
-(*   let print_key (key, decoded) = Printf.sprintf "Key: %c\nDecoded: %s" key (Bytes.to_string decoded) in *)
-(*   print_key (find_key 'a') *)
+  let all_keys = List.init 256 Char.chr in
+  let results = List.map score_key all_keys in
+  List.sort compare results |> List.rev |> List.hd
+
+
+let set1c3 () =
+  let print_triple (score, key, output) =
+    Printf.sprintf "Key: %C, Score: %d, Decoded: %S" key score (Bytes.to_string output) in
+  hexdecode c3data |> decrypt |> print_triple
