@@ -47,6 +47,12 @@ let score freq_string =
   in
   Bytes.to_seq expected_order |> Seq.mapi score_char |> Seq.fold_left (+) 0
 
+type decrypt_score = {
+  score : int;
+  key : char;
+  output : Bytes.t;
+}
+
 let decrypt text =
   let xor_with key =
     let key_bytes = Bytes.make (Bytes.length text) key in
@@ -55,14 +61,24 @@ let decrypt text =
   let score_key key =
     let decrypted = xor_with key in
     let result = chars_by_freq decrypted |> score in
-    (result, key, decrypted) in
+    {score=result; key=key; output=decrypted} in
 
   let all_keys = List.init 256 Char.chr in
   let results = List.map score_key all_keys in
   List.sort compare results |> List.rev |> List.hd
 
+let print_triple {score; key; output} =
+  Printf.sprintf "Key: %C, Score: %d, Decoded: %S" key score (Bytes.to_string output)
 
 let set1c3 () =
-  let print_triple (score, key, output) =
-    Printf.sprintf "Key: %C, Score: %d, Decoded: %S" key score (Bytes.to_string output) in
   hexdecode c3data |> decrypt |> print_triple
+
+let find_encrypted_line ic =
+  let compare_line current line =
+    let this_result = hexdecode line |> decrypt in
+    if (current < this_result) then this_result else current
+  in
+  In_channel.fold_lines compare_line {score=0; key='\000'; output=Bytes.empty} ic
+
+let set1c4 () =
+  find_encrypted_line In_channel.stdin |> print_triple
