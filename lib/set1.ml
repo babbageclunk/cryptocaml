@@ -82,3 +82,16 @@ let find_encrypted_line ic =
 
 let set1c4 () =
   find_encrypted_line In_channel.stdin |> print_triple
+
+
+let c5data = Bytes.of_string
+  "Burning 'em, if you ain't quick and nimble\n\
+   I go crazy when I hear a cymbal"
+
+let c5key = Bytes.of_string "ICE"
+
+let repeat_bytes b len =
+  "something here"
+
+let repeating_key_xor key text =
+  "something else"
