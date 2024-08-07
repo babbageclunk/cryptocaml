@@ -5,6 +5,12 @@ let hexencode b = Hex.of_bytes b |> Hex.show
 
 let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
 
+(* Base64 doesn't handle \n in the input so we need to filter those
+   out first. *)
+let b64decode str =
+  let r = Str.regexp "\n" in
+  Str.global_replace r "" str |> Base64.decode_exn |> Bytes.of_string
+
 let set1c1 () = hexdecode c1data |> b64encode
 
 let xor_char a b = (Char.code a) lxor (Char.code b) |> Char.chr
@@ -155,6 +161,18 @@ let hamming_distance a b =
 
 (* NOTE: I was curious why this would work, found a good answer here:
    https://crypto.stackexchange.com/a/8118*)
+
+let find_keysize text =
+  let normalise size distance =
+    (float_of_int distance) /. (float_of_int size)
+  in
+  let try_keysize size =
+    let block1 = Bytes.sub text 0 size in
+    let block2 = Bytes.sub text size size in
+    hamming_distance block1 block2 |> normalise size
+  in
+  List.init 38 ((+) 2) |> List.map (fun n -> (try_keysize n, n)) |> List.fold_left min (Float.max_float, 0)
+
 
 (* Now that you probably know the KEYSIZE: break the ciphertext into
    blocks of KEYSIZE length. *)
