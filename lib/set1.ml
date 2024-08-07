@@ -91,7 +91,14 @@ let c5data = Bytes.of_string
 let c5key = Bytes.of_string "ICE"
 
 let repeat_bytes b len =
-  "something here"
+  let dest = Bytes.create len in
+  for i = 0 to (len - 1) do
+    i mod (Bytes.length b) |> Bytes.get b |> Bytes.set dest i
+  done;
+  dest
 
 let repeating_key_xor key text =
-  "something else"
+  Bytes.length text |> repeat_bytes key |> xor_bytes text
+
+let set1c5 () =
+  repeating_key_xor c5key c5data |> hexencode
