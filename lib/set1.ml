@@ -3,9 +3,9 @@ let c1data = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69
 let hexdecode s = `Hex s |> Hex.to_bytes
 let hexencode b = Hex.of_bytes b |> Hex.show
 
-let b64encode bytes = Base64.encode_string (Bytes.to_string bytes)
+let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
 
-let set1c1 () = b64encode (hexdecode c1data)
+let set1c1 () = hexdecode c1data |> b64encode
 
 let xor_char a b = (Char.code a) lxor (Char.code b) |> Char.chr
 
@@ -110,6 +110,34 @@ let set1c5 () =
 (* Write a function to compute the edit distance/Hamming distance
    between two strings. The Hamming distance is just the number of
    differing bits. The distance between: *)
+
+let nibble_popcounts = [|
+  0; (* 0000 *)
+  1; (* 0001 *)
+  1; (* 0010 *)
+  2; (* 0011 *)
+  1; (* 0100 *)
+  2; (* 0101 *)
+  2; (* 0110 *)
+  3; (* 0111 *)
+  1; (* 1000 *)
+  2; (* 1001 *)
+  2; (* 1010 *)
+  3; (* 1011 *)
+  2; (* 1100 *)
+  3; (* 1101 *)
+  3; (* 1110 *)
+  4; (* 1111 *)
+|]
+
+let popcount c =
+  let i = Char.code c in
+  let bottom = i land 0x0f in
+  let top = i lsr 4 in
+  nibble_popcounts.(bottom) + nibble_popcounts.(top)
+
+let hamming_distance a b =
+  xor_bytes a b |> Bytes.to_seq |> Seq.fold_left (fun i c -> i + (popcount c)) 0
 
 (* this is a test *)
 (* and *)
