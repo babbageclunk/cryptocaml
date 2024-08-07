@@ -153,6 +153,9 @@ let hamming_distance a b =
    values. Or take 4 KEYSIZE blocks instead of 2 and average the
    distances. *)
 
+(* NOTE: I was curious why this would work, found a good answer here:
+   https://crypto.stackexchange.com/a/8118*)
+
 (* Now that you probably know the KEYSIZE: break the ciphertext into
    blocks of KEYSIZE length. *)
 
