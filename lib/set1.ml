@@ -71,7 +71,7 @@ let decrypt text =
 
   let all_keys = List.init 256 Char.chr in
   let results = List.map score_key all_keys in
-  List.sort compare results |> List.rev |> List.hd
+  List.fold_left max {score=0; key='\000'; output=Bytes.empty} results
 
 let print_triple {score; key; output} =
   Printf.sprintf "Key: %C, Score: %d, Decoded: %S" key score (Bytes.to_string output)
@@ -162,28 +162,60 @@ let hamming_distance a b =
 (* NOTE: I was curious why this would work, found a good answer here:
    https://crypto.stackexchange.com/a/8118*)
 
-let find_keysize text =
+let find_keysize candidates text =
   let normalise size distance =
     (float_of_int distance) /. (float_of_int size)
   in
-  let try_keysize size =
-    let block1 = Bytes.sub text 0 size in
-    let block2 = Bytes.sub text size size in
-    hamming_distance block1 block2 |> normalise size
+  let normalised_distance b1 b2 =
+    hamming_distance b1 b2 |> normalise (Bytes.length b1)
   in
-  List.init 38 ((+) 2) |> List.map (fun n -> (try_keysize n, n)) |> List.fold_left min (Float.max_float, 0)
+  let try_keysize size =
+    let blocks = Seq.init 4 (fun i -> Bytes.sub text (size*i) size) in
+    let pair_distances = Seq.map2 normalised_distance blocks (Seq.drop 1 blocks) in
+    (Seq.fold_left (+.) 0. pair_distances) /. (float_of_int (candidates - 1))
+  in
+  List.init 38 ((+) 2) |> List.map (fun n -> (try_keysize n, n)) |> List.sort compare
 
 
 (* Now that you probably know the KEYSIZE: break the ciphertext into
    blocks of KEYSIZE length. *)
 
+let blocks size text =
+  let text_len = Bytes.length text in
+  let rec bsplit acc pos =
+    let remaining = text_len - pos in
+    if remaining > size then
+      let chunk = Bytes.sub text pos size in
+      bsplit (chunk :: acc) (pos + size)
+    else
+      (Bytes.sub text pos remaining)::acc
+  in
+  bsplit [] 0 |> List.rev
+
 (* Now transpose the blocks: make a block that is the first byte of
    every block, and a block that is the second byte of every block,
    and so on. *)
 
+let transpose blocks =
+  let blocks_seq = List.map Bytes.to_seq blocks |> List.to_seq in
+  Seq.transpose blocks_seq |> Seq.map Bytes.of_seq |> List.of_seq
+
+
 (* Solve each block as if it was single-character XOR. You already
    have code to do this. *)
+
+let solve blocks =
+  let scores = List.map decrypt blocks in
+  List.fold_left (fun acc {key; _} -> key::acc) [] scores |> List.rev |> List.to_seq |> Bytes.of_seq
 
 (* For each block, the single-byte XOR key that produces the best
    looking histogram is the repeating-key XOR key byte for that
    block. Put them together and you have the key. *)
+
+let set1c6 () =
+  let text = In_channel.input_all In_channel.stdin |> b64decode in
+  let key = blocks 29 text |> transpose |> solve in
+  repeating_key_xor key text |> Bytes.to_string |> Printf.sprintf "Key: %S\n%s" (Bytes.to_string key)
+
+let load filename =
+  In_channel.with_open_text filename In_channel.input_all |> b64decode
