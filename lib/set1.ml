@@ -230,3 +230,12 @@ let set1c6 () =
 
 let load filename =
   In_channel.with_open_text filename In_channel.input_all |> b64decode
+
+let c7key = "YELLOW SUBMARINE"
+
+let set1c7 () =
+  let cipher = Cryptokit.Block.(new cipher (new aes_decrypt c7key)) in
+  let text = In_channel.input_all In_channel.stdin |> b64decode in
+  cipher#put_string (Bytes.to_string text);
+  cipher#finish;
+  cipher#get_string
