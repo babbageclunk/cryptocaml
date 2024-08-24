@@ -29,15 +29,24 @@ module CharMap = Map.Make(Char)
 
 let char_frequencies text =
   let counts = CharMap.empty in
-  let add_char map c = CharMap.update c (function None -> Some 1 | Some n -> Some (n + 1)) map in
+  let add_char dict c = CharMap.update c (function None -> Some 1 | Some n -> Some (n + 1)) dict in
   Bytes.fold_left add_char counts text
 
-let filter_bytes b pred = Bytes.to_seq b |> Seq.filter pred |> Bytes.of_seq
+let filter_bytes b pred =
+  Bytes.to_seq b
+  |> Seq.filter pred
+  |> Bytes.of_seq
 
 let chars_by_freq text =
-  let freqs = Bytes.map Char.lowercase_ascii text |> char_frequencies in
-  let sorted_freqs = CharMap.bindings freqs |> List.sort (fun (_, a) (_, b) -> compare b a) in
-  List.to_seq sorted_freqs |> Seq.map fst |> Bytes.of_seq
+  let freqs =
+    Bytes.map Char.lowercase_ascii text
+    |> char_frequencies in
+  let sorted_freqs =
+    CharMap.bindings freqs
+    |> List.sort (fun (_, a) (_, b) -> compare b a) in
+  List.to_seq sorted_freqs
+  |> Seq.map fst
+  |> Bytes.of_seq
 
 (* Guess at a scoring algo: *)
 (* For each char in the expected order, that char is worth a possible
@@ -99,7 +108,9 @@ let c5key = Bytes.of_string "ICE"
 let repeat_bytes b len =
   let dest = Bytes.create len in
   for i = 0 to (len - 1) do
-    i mod (Bytes.length b) |> Bytes.get b |> Bytes.set dest i
+    i mod (Bytes.length b)
+    |> Bytes.get b
+    |> Bytes.set dest i
   done;
   dest
 
