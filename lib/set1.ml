@@ -185,7 +185,9 @@ let find_keysize candidates text =
     let pair_distances = Seq.map2 normalised_distance blocks (Seq.drop 1 blocks) in
     (Seq.fold_left (+.) 0. pair_distances) /. (float_of_int (candidates - 1))
   in
-  List.init 38 ((+) 2) |> List.map (fun n -> (try_keysize n, n)) |> List.sort compare
+  List.init 38 ((+) 2)
+  |> List.map (fun n -> (try_keysize n, n))
+  |> List.sort compare
 
 
 (* Now that you probably know the KEYSIZE: break the ciphertext into
@@ -217,7 +219,10 @@ let transpose blocks =
 
 let solve blocks =
   let scores = List.map decrypt blocks in
-  List.fold_left (fun acc {key; _} -> key::acc) [] scores |> List.rev |> List.to_seq |> Bytes.of_seq
+  List.fold_left (fun acc {key; _} -> key::acc) [] scores
+  |> List.rev
+  |> List.to_seq
+  |> Bytes.of_seq
 
 (* For each block, the single-byte XOR key that produces the best
    looking histogram is the repeating-key XOR key byte for that
@@ -239,3 +244,43 @@ let set1c7 () =
   cipher#put_string (Bytes.to_string text);
   cipher#finish;
   cipher#get_string
+
+module BytesMap = Map.Make(Bytes)
+
+let find_dupe_blocks size text =
+  let blocks = blocks size text in
+  let add_block dict block =
+    BytesMap.update block (function None -> Some 1 | Some n -> Some  (n + 1)) dict
+  in
+  let block_map =
+    List.fold_left add_block BytesMap.empty blocks
+  in
+  BytesMap.filter (fun _ v -> v > 1) block_map
+  |> BytesMap.to_list
+
+let find_lines_with_dupes lines =
+  let check_line i line =
+    let dupes =
+      b64decode line
+      |> find_dupe_blocks 16 in
+    (i, dupes)
+  in
+  List.mapi check_line lines
+  |> List.filter (fun (_, dupes) -> (List.length dupes) > 0)
+
+
+let set1c8 () =
+  let lines = In_channel.input_lines In_channel.stdin in
+  let dupe_lines = find_lines_with_dupes lines in
+  let buf = Buffer.create 0 in
+  let print_dupe (b, count) =
+    Printf.sprintf "  (%S, %d)\n" (Bytes.to_string b) count
+    |> Buffer.add_string buf
+  in
+  List.iter (
+    fun (lno, dupes) ->
+      Printf.sprintf "%d: [\n" lno |> Buffer.add_string buf;
+      List.iter print_dupe dupes;
+      Buffer.add_string buf "]\n"
+  ) dupe_lines;
+  Buffer.contents buf
