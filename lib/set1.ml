@@ -9,17 +9,15 @@ let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
    out first. *)
 let b64decode str =
   let r = Str.regexp "\n" in
-  Str.global_replace r "" str |> Base64.decode_exn |> Bytes.of_string
+  Str.global_replace r "" str
+  |> Base64.decode_exn
+  |> Bytes.of_string
 
 let set1c1 () = hexdecode c1data |> b64encode
 
-let xor_char a b = (Char.code a) lxor (Char.code b) |> Char.chr
-
-let xor_bytes a b = Seq.map2 xor_char (Bytes.to_seq a) (Bytes.to_seq b) |> Bytes.of_seq
-
 let c2data1 = "1c0111001f010100061a024b53535009181c"
 let c2data2 = "686974207468652062756c6c277320657965"
-let set1c2 () = xor_bytes (hexdecode c2data1) (hexdecode c2data2) |> hexencode
+let set1c2 () = Common.xor_bytes (hexdecode c2data1) (hexdecode c2data2) |> hexencode
 
 let c3data = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
@@ -71,7 +69,7 @@ type decrypt_score = {
 let decrypt text =
   let xor_with key =
     let key_bytes = Bytes.make (Bytes.length text) key in
-    xor_bytes text key_bytes in
+    Common.xor_bytes text key_bytes in
 
   let score_key key =
     let decrypted = xor_with key in
@@ -115,7 +113,7 @@ let repeat_bytes b len =
   dest
 
 let repeating_key_xor key text =
-  Bytes.length text |> repeat_bytes key |> xor_bytes text
+  Bytes.length text |> repeat_bytes key |> Common.xor_bytes text
 
 let set1c5 () =
   repeating_key_xor c5key c5data |> hexencode
@@ -154,7 +152,9 @@ let popcount c =
   nibble_popcounts.(bottom) + nibble_popcounts.(top)
 
 let hamming_distance a b =
-  xor_bytes a b |> Bytes.to_seq |> Seq.fold_left (fun i c -> i + (popcount c)) 0
+  Common.xor_bytes a b
+  |> Bytes.to_seq
+  |> Seq.fold_left (fun i c -> i + (popcount c)) 0
 
 (* this is a test *)
 (* and *)
@@ -193,18 +193,6 @@ let find_keysize candidates text =
 (* Now that you probably know the KEYSIZE: break the ciphertext into
    blocks of KEYSIZE length. *)
 
-let blocks size text =
-  let text_len = Bytes.length text in
-  let rec bsplit acc pos =
-    let remaining = text_len - pos in
-    if remaining > size then
-      let chunk = Bytes.sub text pos size in
-      bsplit (chunk :: acc) (pos + size)
-    else
-      (Bytes.sub text pos remaining)::acc
-  in
-  bsplit [] 0 |> List.rev
-
 (* Now transpose the blocks: make a block that is the first byte of
    every block, and a block that is the second byte of every block,
    and so on. *)
@@ -230,25 +218,22 @@ let solve blocks =
 
 let set1c6 () =
   let text = In_channel.input_all In_channel.stdin |> b64decode in
-  let key = blocks 29 text |> transpose |> solve in
+  let key = Common.blocks 29 text |> transpose |> solve in
   repeating_key_xor key text |> Bytes.to_string |> Printf.sprintf "Key: %S\n%s" (Bytes.to_string key)
 
 let load filename =
   In_channel.with_open_text filename In_channel.input_all |> b64decode
 
-let c7key = "YELLOW SUBMARINE"
+let c7key = Bytes.of_string "YELLOW SUBMARINE"
 
 let set1c7 () =
-  let cipher = Cryptokit.Block.(new cipher (new aes_decrypt c7key)) in
   let text = In_channel.input_all In_channel.stdin |> b64decode in
-  cipher#put_string (Bytes.to_string text);
-  cipher#finish;
-  cipher#get_string
+  Common.aes_ecb c7key text |> Bytes.to_string
 
 module BytesMap = Map.Make(Bytes)
 
 let find_dupe_blocks size text =
-  let blocks = blocks size text in
+  let blocks = Common.blocks size text in
   let add_block dict block =
     BytesMap.update block (function None -> Some 1 | Some n -> Some  (n + 1)) dict
   in
