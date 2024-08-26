@@ -1,0 +1,5 @@
+open Cryptocaml.Set2;;
+open Cryptocaml;;
+
+let data = Set1.load "010.txt";;
+let iv = Bytes.make 16 '\000';;

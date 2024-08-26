@@ -23,3 +23,14 @@ let xor_char a b = (Char.code a) lxor (Char.code b) |> Char.chr
 
 let xor_bytes a b =
   Seq.map2 xor_char (Bytes.to_seq a) (Bytes.to_seq b) |> Bytes.of_seq
+
+(* Base64 doesn't handle \n in the input so we need to filter those
+   out first. *)
+let b64decode str =
+  let r = Str.regexp "\n" in
+  Str.global_replace r "" str
+  |> Base64.decode_exn
+  |> Bytes.of_string
+
+let input () =
+  In_channel.input_all In_channel.stdin |> b64decode

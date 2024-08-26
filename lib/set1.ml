@@ -5,14 +5,6 @@ let hexencode b = Hex.of_bytes b |> Hex.show
 
 let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
 
-(* Base64 doesn't handle \n in the input so we need to filter those
-   out first. *)
-let b64decode str =
-  let r = Str.regexp "\n" in
-  Str.global_replace r "" str
-  |> Base64.decode_exn
-  |> Bytes.of_string
-
 let set1c1 () = hexdecode c1data |> b64encode
 
 let c2data1 = "1c0111001f010100061a024b53535009181c"
@@ -217,17 +209,17 @@ let solve blocks =
    block. Put them together and you have the key. *)
 
 let set1c6 () =
-  let text = In_channel.input_all In_channel.stdin |> b64decode in
+  let text = Common.input () in
   let key = Common.blocks 29 text |> transpose |> solve in
   repeating_key_xor key text |> Bytes.to_string |> Printf.sprintf "Key: %S\n%s" (Bytes.to_string key)
 
 let load filename =
-  In_channel.with_open_text filename In_channel.input_all |> b64decode
+  In_channel.with_open_text filename In_channel.input_all |> Common.b64decode
 
 let c7key = Bytes.of_string "YELLOW SUBMARINE"
 
 let set1c7 () =
-  let text = In_channel.input_all In_channel.stdin |> b64decode in
+  let text = Common.input () in
   Common.aes_ecb c7key text |> Bytes.to_string
 
 module BytesMap = Map.Make(Bytes)
@@ -246,7 +238,7 @@ let find_dupe_blocks size text =
 let find_lines_with_dupes lines =
   let check_line i line =
     let dupes =
-      b64decode line
+      Common.b64decode line
       |> find_dupe_blocks 16 in
     (i, dupes)
   in
