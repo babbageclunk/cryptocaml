@@ -34,3 +34,16 @@ let b64decode str =
 
 let input () =
   In_channel.input_all In_channel.stdin |> b64decode
+
+module BytesMap = Map.Make(Bytes)
+
+let find_dupe_blocks size text =
+  let blocks = blocks size text in
+  let add_block dict block =
+    BytesMap.update block (function None -> Some 1 | Some n -> Some  (n + 1)) dict
+  in
+  let block_map =
+    List.fold_left add_block BytesMap.empty blocks
+  in
+  BytesMap.filter (fun _ v -> v > 1) block_map
+  |> BytesMap.to_list

@@ -222,24 +222,11 @@ let set1c7 () =
   let text = Common.input () in
   Common.aes_ecb c7key text |> Bytes.to_string
 
-module BytesMap = Map.Make(Bytes)
-
-let find_dupe_blocks size text =
-  let blocks = Common.blocks size text in
-  let add_block dict block =
-    BytesMap.update block (function None -> Some 1 | Some n -> Some  (n + 1)) dict
-  in
-  let block_map =
-    List.fold_left add_block BytesMap.empty blocks
-  in
-  BytesMap.filter (fun _ v -> v > 1) block_map
-  |> BytesMap.to_list
-
 let find_lines_with_dupes lines =
   let check_line i line =
     let dupes =
       Common.b64decode line
-      |> find_dupe_blocks 16 in
+      |> Common.find_dupe_blocks 16 in
     (i, dupes)
   in
   List.mapi check_line lines

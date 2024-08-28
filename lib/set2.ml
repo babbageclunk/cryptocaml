@@ -58,7 +58,21 @@ let encryption_oracle text =
     Bytes.concat Bytes.empty [randpadding (); text; randpadding ()]
     |> pkcs7 16
   in
-  if Random.bool () then
+  if Random.bool () then (
+    Printf.printf "using ECB\n";
     Common.aes_ecb rand_key padded
-  else
+  ) else (
+    Printf.printf "using CBC\n";
     aes_cbc_encrypt rand_key rand_iv padded
+  )
+
+let set2c11 () =
+  Random.self_init ();
+  let input =
+    List.init 3 (fun _ -> key)
+    |> Bytes.concat Bytes.empty
+  in
+  let encrypted = encryption_oracle input in
+  match (Common.find_dupe_blocks 16 encrypted) with
+  | [] -> "CBC detected"
+  | _ -> "ECB detected"
