@@ -9,7 +9,7 @@ let pkcs7 size text =
 
 let key = Bytes.of_string "YELLOW SUBMARINE"
 
-let set2c1 () =
+let set2c9 () =
   pkcs7 20 key |> Bytes.to_string
 
 let aes_cbc_decrypt key iv text =
@@ -25,7 +25,7 @@ let aes_cbc_decrypt key iv text =
   in
   chain iv blocks []
 
-let set2c2 () =
+let set2c10 () =
   Common.input ()
   |> aes_cbc_decrypt key (Bytes.make 16 '\000')
   |> Bytes.to_string
