@@ -76,3 +76,25 @@ let set2c11 () =
   match (Common.find_dupe_blocks 16 encrypted) with
   | [] -> "CBC detected"
   | _ -> "ECB detected"
+
+
+let unknown_text = (
+  "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
+   aGFpciBjYW4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBq\
+   dXN0IHRvIHNheSBoaQpEaWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUg\
+   YnkK"
+)
+
+let consistent_key : string option ref = ref None
+
+let get_consistent_key () =
+  match !consistent_key with
+  | None ->
+    let key = Bytes.init 16 randchar in
+    consistent_key := Some key;
+    key
+  | Some k -> k
+
+let ecb_oracle text =
+  let key = get_consistent_key () in
+  something
