@@ -12,13 +12,16 @@ let key = Bytes.of_string "YELLOW SUBMARINE"
 let set2c9 () =
   pkcs7 20 key |> Bytes.to_string
 
+let join_bytes blist =
+  Bytes.concat Bytes.empty blist
+
 let aes_cbc_decrypt key iv text =
   let size = Bytes.length key in
   let padded = pkcs7 size text in
   let blocks = Common.blocks size padded in
   let rec chain last blocks acc =
     match blocks with
-    | [] -> List.rev acc |> Bytes.concat Bytes.empty
+    | [] -> List.rev acc |> join_bytes
     | b::bs ->
       let this = Common.aes_ecb key b |> Common.xor_bytes last in
       chain b bs (this::acc)
@@ -37,7 +40,7 @@ let aes_cbc_encrypt key iv text =
   let blocks = Common.blocks size padded in
   let rec chain last blocks acc =
     match blocks with
-    | [] -> List.rev acc |> Bytes.concat Bytes.empty
+    | [] -> List.rev acc |> join_bytes
     | b::bs ->
       let this = Common.xor_bytes last b |> Common.aes_ecb key in
       chain this bs (this::acc)
@@ -55,7 +58,7 @@ let encryption_oracle text =
   let rand_key = Bytes.init 16 randchar in
   let rand_iv = Bytes.init 16 randchar in
   let padded =
-    Bytes.concat Bytes.empty [randpadding (); text; randpadding ()]
+    join_bytes [randpadding (); text; randpadding ()]
     |> pkcs7 16
   in
   if Random.bool () then (
@@ -66,17 +69,21 @@ let encryption_oracle text =
     aes_cbc_encrypt rand_key rand_iv padded
   )
 
+let has_dupe_blocks size text =
+  Common.find_dupe_blocks size text |> List.is_empty |> not
+
+
 let set2c11 () =
   Random.self_init ();
   let input =
     List.init 3 (fun _ -> key)
-    |> Bytes.concat Bytes.empty
+    |> join_bytes
   in
   let encrypted = encryption_oracle input in
-  match (Common.find_dupe_blocks 16 encrypted) with
-  | [] -> "CBC detected"
-  | _ -> "ECB detected"
-
+  if (has_dupe_blocks 16 encrypted) then
+    "ECB detected"
+  else
+    "CBC detected"
 
 let unknown_text = (
   "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkg\
@@ -85,7 +92,7 @@ let unknown_text = (
    YnkK"
 )
 
-let consistent_key : string option ref = ref None
+let consistent_key : bytes option ref = ref None
 
 let get_consistent_key () =
   match !consistent_key with
@@ -97,4 +104,56 @@ let get_consistent_key () =
 
 let ecb_oracle text =
   let key = get_consistent_key () in
-  something
+  let suffix = Common.b64decode unknown_text in
+  Bytes.cat text suffix
+  |> pkcs7 16
+  |> Common.aes_ecb key
+
+let find_block_size oracle =
+  let prefix size text = Bytes.sub text 0 size in
+  let rec check size last =
+    if size > 1000 then
+      raise Not_found;
+    let result = Bytes.make (size + 1) 'A' |> oracle in
+    let prev_prefix = prefix size last in
+    let this_prefix = prefix size result in
+    if prev_prefix = this_prefix then
+      size
+    else
+      check (size + 1) result
+  in
+  Bytes.of_string "A" |> oracle |> check 1
+
+let find_next_byte oracle block_size known =
+  let known_size = Bytes.length known in
+  let padding_size = block_size - (known_size mod block_size) - 1 in
+  let padding = Bytes.make padding_size '\000' in
+  let encrypted = join_bytes [padding; known] |> oracle in
+  let blocks = Common.blocks block_size encrypted in
+  let check_block = known_size / block_size in
+  let target_block = List.nth blocks check_block in
+
+  Printf.printf "padding_size = %d, check_block = %d, target_block = %S\n" padding_size check_block (Common.hexencode target_block);
+
+  let rec check_from candidate =
+    let cand_char = Char.chr candidate in
+    let my_padding = join_bytes [padding; known; Bytes.make 1 cand_char] in
+    let encrypted = oracle my_padding in
+    let blocks = Common.blocks block_size encrypted in
+    let my_block = List.nth blocks check_block in
+    Printf.printf "cand_char = %C, my_padding = %S, my_block = %S\n" cand_char (Bytes.to_string my_padding) (Common.hexencode my_block);
+    if my_block = target_block then
+      cand_char
+    else
+      check_from (candidate + 1)
+  in
+  check_from 0
+
+exception Not_ecb
+
+let set2c12 () =
+  let block_size = find_block_size ecb_oracle in
+  let encrypted = Bytes.make (block_size * 2) 'A' |> ecb_oracle in
+  if not (has_dupe_blocks block_size encrypted) then
+    raise Not_ecb;
+  "write me"

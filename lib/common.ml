@@ -1,6 +1,6 @@
 let aes_ecb key text =
   let cipher = Bytes.to_string key
-      |> new Cryptokit.Block.aes_decrypt
+      |> new Cryptokit.Block.aes_encrypt
       |> new Cryptokit.Block.cipher
   in
   Bytes.to_string text |> cipher#put_string;
@@ -24,6 +24,9 @@ let xor_char a b = (Char.code a) lxor (Char.code b) |> Char.chr
 let xor_bytes a b =
   Seq.map2 xor_char (Bytes.to_seq a) (Bytes.to_seq b) |> Bytes.of_seq
 
+let hexdecode s = `Hex s |> Hex.to_bytes
+let hexencode b = Hex.of_bytes b |> Hex.show
+
 (* Base64 doesn't handle \n in the input so we need to filter those
    out first. *)
 let b64decode str =
@@ -31,6 +34,8 @@ let b64decode str =
   Str.global_replace r "" str
   |> Base64.decode_exn
   |> Bytes.of_string
+
+let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
 
 let input () =
   In_channel.input_all In_channel.stdin |> b64decode

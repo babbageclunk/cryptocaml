@@ -1,15 +1,12 @@
 let c1data = "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d"
 
-let hexdecode s = `Hex s |> Hex.to_bytes
-let hexencode b = Hex.of_bytes b |> Hex.show
-
-let b64encode bytes = Bytes.to_string bytes |> Base64.encode_string
-
-let set1c1 () = hexdecode c1data |> b64encode
+let set1c1 () = Common.hexdecode c1data |> Common.b64encode
 
 let c2data1 = "1c0111001f010100061a024b53535009181c"
 let c2data2 = "686974207468652062756c6c277320657965"
-let set1c2 () = Common.xor_bytes (hexdecode c2data1) (hexdecode c2data2) |> hexencode
+let set1c2 () =
+  Common.xor_bytes (Common.hexdecode c2data1) (Common.hexdecode c2data2)
+  |> Common.hexencode
 
 let c3data = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
@@ -76,11 +73,11 @@ let print_triple {score; key; output} =
   Printf.sprintf "Key: %C, Score: %d, Decoded: %S" key score (Bytes.to_string output)
 
 let set1c3 () =
-  hexdecode c3data |> decrypt |> print_triple
+  Common.hexdecode c3data |> decrypt |> print_triple
 
 let find_encrypted_line ic =
   let compare_line current line =
-    let this_result = hexdecode line |> decrypt in
+    let this_result = Common.hexdecode line |> decrypt in
     if (current < this_result) then this_result else current
   in
   In_channel.fold_lines compare_line {score=0; key='\000'; output=Bytes.empty} ic
@@ -108,7 +105,7 @@ let repeating_key_xor key text =
   Bytes.length text |> repeat_bytes key |> Common.xor_bytes text
 
 let set1c5 () =
-  repeating_key_xor c5key c5data |> hexencode
+  repeating_key_xor c5key c5data |> Common.hexencode
 
 
 (* Let KEYSIZE be the guessed length of the key; try values from 2 to
