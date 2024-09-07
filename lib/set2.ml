@@ -133,21 +133,36 @@ let find_next_byte oracle block_size known =
   let check_block = known_size / block_size in
   let target_block = List.nth blocks check_block in
 
-  Printf.printf "padding_size = %d, check_block = %d, target_block = %S\n" padding_size check_block (Common.hexencode target_block);
+  (* Printf.printf "padding_size = %d, check_block = %d, target_block = %S\n" padding_size check_block (Common.hexencode target_block); *)
 
   let rec check_from candidate =
-    let cand_char = Char.chr candidate in
-    let my_padding = join_bytes [padding; known; Bytes.make 1 cand_char] in
-    let encrypted = oracle my_padding in
-    let blocks = Common.blocks block_size encrypted in
-    let my_block = List.nth blocks check_block in
-    Printf.printf "cand_char = %C, my_padding = %S, my_block = %S\n" cand_char (Bytes.to_string my_padding) (Common.hexencode my_block);
-    if my_block = target_block then
-      cand_char
+    if candidate > 255 then
+      (* This happens when we hit padding - stop! *)
+      Option.none
     else
-      check_from (candidate + 1)
+      let cand_char = Char.chr candidate in
+      let my_padding = join_bytes [padding; known; Bytes.make 1 cand_char] in
+      let encrypted = oracle my_padding in
+      let blocks = Common.blocks block_size encrypted in
+      let my_block = List.nth blocks check_block in
+      (* Printf.printf "cand_char = %C, my_padding = %S, my_block = %S\n" cand_char (Bytes.to_string my_padding) (Common.hexencode my_block); *)
+      if my_block = target_block then
+        Option.some cand_char
+      else
+        check_from (candidate + 1)
   in
   check_from 0
+
+let find_unknown_suffix oracle block_size =
+  let rec loop known =
+    match find_next_byte oracle block_size known with
+    | None -> known
+    | Some c ->
+      Bytes.make 1 c
+      |> Bytes.cat known
+      |> loop
+  in
+  loop Bytes.empty
 
 exception Not_ecb
 
@@ -156,4 +171,5 @@ let set2c12 () =
   let encrypted = Bytes.make (block_size * 2) 'A' |> ecb_oracle in
   if not (has_dupe_blocks block_size encrypted) then
     raise Not_ecb;
-  "write me"
+
+  find_unknown_suffix ecb_oracle block_size |> Bytes.to_string
