@@ -138,7 +138,7 @@ let find_next_byte oracle block_size known =
   let rec check_from candidate =
     if candidate > 255 then
       (* This happens when we hit padding - stop! *)
-      Option.none
+      None
     else
       let cand_char = Char.chr candidate in
       let my_padding = join_bytes [padding; known; Bytes.make 1 cand_char] in
@@ -147,7 +147,7 @@ let find_next_byte oracle block_size known =
       let my_block = List.nth blocks check_block in
       (* Printf.printf "cand_char = %C, my_padding = %S, my_block = %S\n" cand_char (Bytes.to_string my_padding) (Common.hexencode my_block); *)
       if my_block = target_block then
-        Option.some cand_char
+        Some cand_char
       else
         check_from (candidate + 1)
   in
