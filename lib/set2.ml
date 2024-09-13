@@ -173,3 +173,22 @@ let set2c12 () =
     raise Not_ecb;
 
   find_unknown_suffix ecb_oracle block_size |> Bytes.to_string
+
+
+let parse_profile text =
+  String.split_on_char '&' text
+  |> List.filter_map (
+    fun item ->
+      match String.split_on_char '=' item with
+      | a::b::_ -> Some (a, b)
+      | _ -> None
+  )
+
+let remove_meta_chars text =
+  String.to_seq text
+  |> Seq.filter (fun c -> c != '&' && c != '=')
+  |> String.of_seq
+
+let profile_for email =
+  let cleaned = remove_meta_chars email in
+  Printf.sprintf "email=%s&uid=10&role=user" cleaned
