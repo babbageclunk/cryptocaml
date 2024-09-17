@@ -1,6 +1,15 @@
-let aes_ecb key text =
+let aes_ecb_encrypt key text =
   let cipher = Bytes.to_string key
       |> new Cryptokit.Block.aes_encrypt
+      |> new Cryptokit.Block.cipher
+  in
+  Bytes.to_string text |> cipher#put_string;
+  cipher#finish;
+  cipher#get_string |> Bytes.of_string
+
+let aes_ecb_decrypt key text =
+  let cipher = Bytes.to_string key
+      |> new Cryptokit.Block.aes_decrypt
       |> new Cryptokit.Block.cipher
   in
   Bytes.to_string text |> cipher#put_string;

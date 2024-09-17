@@ -23,7 +23,7 @@ let aes_cbc_decrypt key iv text =
     match blocks with
     | [] -> List.rev acc |> join_bytes
     | b::bs ->
-      let this = Common.aes_ecb key b |> Common.xor_bytes last in
+      let this = Common.aes_ecb_decrypt key b |> Common.xor_bytes last in
       chain b bs (this::acc)
   in
   chain iv blocks []
@@ -42,7 +42,7 @@ let aes_cbc_encrypt key iv text =
     match blocks with
     | [] -> List.rev acc |> join_bytes
     | b::bs ->
-      let this = Common.xor_bytes last b |> Common.aes_ecb key in
+      let this = Common.xor_bytes last b |> Common.aes_ecb_encrypt key in
       chain this bs (this::acc)
   in
   chain iv blocks []
@@ -63,7 +63,7 @@ let encryption_oracle text =
   in
   if Random.bool () then (
     Printf.printf "using ECB\n";
-    Common.aes_ecb rand_key padded
+    Common.aes_ecb_encrypt rand_key padded
   ) else (
     Printf.printf "using CBC\n";
     aes_cbc_encrypt rand_key rand_iv padded
@@ -107,7 +107,7 @@ let ecb_oracle text =
   let suffix = Common.b64decode unknown_text in
   Bytes.cat text suffix
   |> pkcs7 16
-  |> Common.aes_ecb key
+  |> Common.aes_ecb_encrypt key
 
 let find_block_size oracle =
   let prefix size text = Bytes.sub text 0 size in
@@ -192,3 +192,15 @@ let remove_meta_chars text =
 let profile_for email =
   let cleaned = remove_meta_chars email in
   Printf.sprintf "email=%s&uid=10&role=user" cleaned
+
+let encrypt_profile profile =
+  let key = get_consistent_key () in
+  Bytes.of_string profile
+  |> pkcs7 16
+  |> Common.aes_ecb_encrypt key
+
+let decrypt_profile ciphertext =
+  let key = get_consistent_key () in
+  Common.aes_ecb_decrypt key ciphertext
+  |> Bytes.to_string
+  |> parse_profile

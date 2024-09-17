@@ -208,7 +208,9 @@ let solve blocks =
 let set1c6 () =
   let text = Common.input () in
   let key = Common.blocks 29 text |> transpose |> solve in
-  repeating_key_xor key text |> Bytes.to_string |> Printf.sprintf "Key: %S\n%s" (Bytes.to_string key)
+  repeating_key_xor key text
+  |> Bytes.to_string
+  |> Printf.sprintf "Key: %S\n%s" (Bytes.to_string key)
 
 let load filename =
   In_channel.with_open_text filename In_channel.input_all |> Common.b64decode
@@ -217,7 +219,7 @@ let c7key = Bytes.of_string "YELLOW SUBMARINE"
 
 let set1c7 () =
   let text = Common.input () in
-  Common.aes_ecb c7key text |> Bytes.to_string
+  Common.aes_ecb_decrypt c7key text |> Bytes.to_string
 
 let find_lines_with_dupes lines =
   let check_line i line =
