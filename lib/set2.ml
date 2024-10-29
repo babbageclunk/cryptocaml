@@ -221,8 +221,7 @@ let encrypt_profile profile =
 
 let decrypt_profile ciphertext =
   let key = get_consistent_key () in
-  let raw = Common.aes_ecb_decrypt key ciphertext in
-  Printf.printf "raw = %S\n" (Bytes.to_string raw);
-  pkcs7_unpad 16 raw
+  Common.aes_ecb_decrypt key ciphertext
+  |> pkcs7_unpad 16
   |> Bytes.to_string
   |> parse_profile
