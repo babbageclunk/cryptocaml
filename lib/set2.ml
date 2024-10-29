@@ -1,4 +1,4 @@
-let pkcs7 size text =
+let pkcs7_pad size text =
   let last_block = (Bytes.length text) mod size in
   if last_block = 0 then text
   else
@@ -7,17 +7,37 @@ let pkcs7 size text =
     |> Bytes.make padding
     |> Bytes.cat text
 
+let all_bytes_match char text =
+  Bytes.to_seq text
+  |> Seq.for_all (fun c -> (c = char))
+
+let pkcs7_unpad size text =
+  let length = Bytes.length text in
+  if (length mod size) != 0 then
+    text
+  else
+    let padding_char = Bytes.get text (length - 1) in
+    let padding_len = Char.code padding_char in
+    if padding_len > (size - 1) then
+      text
+    else
+      let maybe_padding = Bytes.sub text (length - padding_len) padding_len in
+      if all_bytes_match padding_char maybe_padding then
+        Bytes.sub text 0 (length - padding_len)
+      else
+        text
+
 let key = Bytes.of_string "YELLOW SUBMARINE"
 
 let set2c9 () =
-  pkcs7 20 key |> Bytes.to_string
+  pkcs7_pad 20 key |> Bytes.to_string
 
 let join_bytes blist =
   Bytes.concat Bytes.empty blist
 
 let aes_cbc_decrypt key iv text =
   let size = Bytes.length key in
-  let padded = pkcs7 size text in
+  let padded = pkcs7_pad size text in
   let blocks = Common.blocks size padded in
   let rec chain last blocks acc =
     match blocks with
@@ -36,7 +56,7 @@ let set2c10 () =
 
 let aes_cbc_encrypt key iv text =
   let size = Bytes.length key in
-  let padded = pkcs7 size text in
+  let padded = pkcs7_pad size text in
   let blocks = Common.blocks size padded in
   let rec chain last blocks acc =
     match blocks with
@@ -59,7 +79,7 @@ let encryption_oracle text =
   let rand_iv = Bytes.init 16 randchar in
   let padded =
     join_bytes [randpadding (); text; randpadding ()]
-    |> pkcs7 16
+    |> pkcs7_pad 16
   in
   if Random.bool () then (
     Printf.printf "using ECB\n";
@@ -106,7 +126,7 @@ let ecb_oracle text =
   let key = get_consistent_key () in
   let suffix = Common.b64decode unknown_text in
   Bytes.cat text suffix
-  |> pkcs7 16
+  |> pkcs7_pad 16
   |> Common.aes_ecb_encrypt key
 
 let find_block_size oracle =
@@ -196,11 +216,13 @@ let profile_for email =
 let encrypt_profile profile =
   let key = get_consistent_key () in
   Bytes.of_string profile
-  |> pkcs7 16
+  |> pkcs7_pad 16
   |> Common.aes_ecb_encrypt key
 
 let decrypt_profile ciphertext =
   let key = get_consistent_key () in
-  Common.aes_ecb_decrypt key ciphertext
+  let raw = Common.aes_ecb_decrypt key ciphertext in
+  Printf.printf "raw = %S\n" (Bytes.to_string raw);
+  pkcs7_unpad 16 raw
   |> Bytes.to_string
   |> parse_profile
