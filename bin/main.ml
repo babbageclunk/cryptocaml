@@ -12,6 +12,7 @@ let challenges = [
   ("s2c10", Cryptocaml.Set2.set2c10);
   ("s2c11", Cryptocaml.Set2.set2c11);
   ("s2c12", Cryptocaml.Set2.set2c12);
+  ("s2c13", Cryptocaml.Set2.set2c13);
 ]
 
 let last_challenge = snd (List.hd (List.rev challenges))

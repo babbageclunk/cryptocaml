@@ -41,6 +41,8 @@ let suite =
     "pkcs7-bad-padding", `Quick, test_pkcs7_unpad 3 "AB\x02" "AB\x02";
     "pkcs7-unpad-3", `Quick, test_pkcs7_unpad 16 "er\014\014\014\014\014\014\014\014\014\014\014\014\014\014" "er";
     "pkcs7-unpad-more-blocks", `Quick, test_pkcs7_unpad 3 "XYZAB\x01" "XYZAB";
+
+    "s2c13", `Quick, test_challenge Set2.set2c13 "admin";
   ]
 
 let () =

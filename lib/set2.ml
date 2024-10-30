@@ -219,9 +219,36 @@ let encrypt_profile profile =
   |> pkcs7_pad 16
   |> Common.aes_ecb_encrypt key
 
+let tee f x = f x; x
+
 let decrypt_profile ciphertext =
   let key = get_consistent_key () in
   Common.aes_ecb_decrypt key ciphertext
   |> pkcs7_unpad 16
   |> Bytes.to_string
   |> parse_profile
+
+(* So now we can make an admin profile by making two profiles:
+   - one with the email "abc@efghijklm" - that produces the profile
+     "email=abc@efghijklm&uid=10&role=user"
+          block 3 starts here --------^
+
+   - the other with the email "0123456789admin\011\011\011\011\011\011\011\011\011\011\011"
+     produces the profile
+     "email=0123456789admin\011\011\011\011\011\011\011\011\011\011\011&uid=10&role=user"
+     Then grab this   |-----------------------------------------------| block from the
+     encrypted text and concat it onto the first two blocks of the first encrypted profile.
+*)
+
+let set2c13 () =
+  let e1 =
+    profile_for "abc@efghijklm"
+    |> encrypt_profile
+  in
+  let e2 =
+    profile_for "0123456789admin\011\011\011\011\011\011\011\011\011\011\011"
+    |> encrypt_profile
+  in
+  Bytes.cat (Bytes.sub e1 0 32) (Bytes.sub e2 16 16)
+  |> decrypt_profile
+  |> List.assoc "role"
