@@ -61,3 +61,6 @@ let find_dupe_blocks size text =
   in
   BytesMap.filter (fun _ v -> v > 1) block_map
   |> BytesMap.to_list
+
+let bytes_index needle haystack =
+  ()

@@ -252,3 +252,22 @@ let set2c13 () =
   Bytes.cat (Bytes.sub e1 0 32) (Bytes.sub e2 16 16)
   |> decrypt_profile
   |> List.assoc "role"
+
+let consistent_prefix : bytes option ref = ref None
+
+let get_consistent_prefix () =
+  match !consistent_prefix with
+  | None ->
+    let prefix_len = Random.int_in_range ~min:1 ~max:64 in
+    let prefix = Bytes.init prefix_len randchar in
+    consistent_prefix := Some prefix;
+    prefix
+  | Some p -> p
+
+let ecb_prefix_oracle text =
+  let prefix = get_consistent_prefix () in
+  let key = get_consistent_key () in
+  let suffix = Common.b64decode unknown_text in
+  join_bytes [prefix; text; suffix]
+  |> pkcs7_pad 16
+  |> Common.aes_ecb_encrypt key
