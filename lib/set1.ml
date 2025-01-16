@@ -224,7 +224,7 @@ let set1c7 () =
 let find_lines_with_dupes lines =
   let check_line i line =
     let dupes =
-      Common.b64decode line
+      Common.hexdecode line
       |> Common.find_dupe_blocks 16 in
     (i, dupes)
   in
@@ -236,8 +236,9 @@ let set1c8 () =
   let lines = In_channel.input_lines In_channel.stdin in
   let dupe_lines = find_lines_with_dupes lines in
   let buf = Buffer.create 0 in
-  let print_dupe (b, count) =
-    Printf.sprintf "  (%S, %d)\n" (Bytes.to_string b) count
+  let print_dupe (b, positions) =
+    let pos_strings = List.map string_of_int positions in
+    Printf.sprintf "  (%S, [%s])\n" (Common.hexencode b) (String.concat ", " pos_strings)
     |> Buffer.add_string buf
   in
   List.iter (

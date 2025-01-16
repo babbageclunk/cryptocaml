@@ -53,14 +53,13 @@ module BytesMap = Map.Make(Bytes)
 
 let find_dupe_blocks size text =
   let blocks = blocks size text in
-  let add_block dict block =
-    BytesMap.update block (function None -> Some 1 | Some n -> Some  (n + 1)) dict
+  let indexed_blocks = List.mapi (fun pos item -> (pos, item)) blocks in
+  let add_block dict (pos, block) =
+    BytesMap.update block (function None -> Some [pos] | Some positions -> Some  (pos::positions)) dict
   in
   let block_map =
-    List.fold_left add_block BytesMap.empty blocks
+    List.fold_left add_block BytesMap.empty indexed_blocks
   in
-  BytesMap.filter (fun _ v -> v > 1) block_map
+  BytesMap.filter (fun _ v -> (List.length v) > 1) block_map
   |> BytesMap.to_list
-
-let bytes_index needle haystack =
-  ()
+  |> List.map (fun (block, positions) -> (block, List.rev positions))
